@@ -11,6 +11,7 @@ import pytorch_lightning as pl
 import torch
 from matplotlib import pyplot
 from torch.utils.data import DataLoader
+from torch.utils.data.distributed import DistributedSampler
 
 from neuralprophet import configure, df_utils, np_types, time_dataset, time_net, utils, utils_metrics
 from neuralprophet.conformal import Conformal
@@ -2645,8 +2646,8 @@ class NeuralProphet:
 
         # Determine the max_number of epochs
         self.config_train.set_auto_batch_epoch(n_data=len(dataset))
-
-        loader = DataLoader(dataset, batch_size=self.config_train.batch_size, shuffle=True, num_workers=num_workers)
+        self.train_sampler = DistributedSampler(dataset)
+        loader = DataLoader(dataset, batch_size=self.config_train.batch_size, shuffle=True, num_workers=num_workers, sampler=self.train_sampler)
 
         return loader
 
@@ -2765,6 +2766,7 @@ class NeuralProphet:
                 # Set parameters for the learning rate finder
                 self.config_train.set_lr_finder_args(dataset_size=dataset_size, num_batches=len(train_loader))
                 # Find suitable learning rate
+                log.info('Before self.trainer.tuner.lr_find')
                 lr_finder = self.trainer.tuner.lr_find(
                     self.model,
                     train_dataloaders=train_loader,
@@ -2774,6 +2776,7 @@ class NeuralProphet:
                 # Estimate the optimat learning rate from the loss curve
                 _, _, lr_suggestion = utils.smooth_loss_and_suggest(lr_finder.results)
                 self.model.learning_rate = lr_suggestion
+            log.info('Before self.trainer.fit')
             start = time.time()
             self.trainer.fit(
                 self.model,
