@@ -2650,7 +2650,7 @@ class NeuralProphet:
         num_replicas = self.strategy.num_workers if self.strategy else 1
         log.info(f'num_replicas:{num_replicas}')
         self.train_sampler = DistributedSampler(dataset, num_replicas=num_replicas, rank=0)
-        loader = DataLoader(dataset, batch_size=self.config_train.batch_size, shuffle=True, num_workers=num_workers, sampler=self.train_sampler)
+        loader = DataLoader(dataset, batch_size=self.config_train.batch_size, shuffle=False, num_workers=num_workers, sampler=self.train_sampler)
 
         return loader
 
