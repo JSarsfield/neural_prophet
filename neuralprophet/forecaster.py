@@ -355,6 +355,7 @@ class NeuralProphet:
         self.name = "NeuralProphet"
         self.n_forecasts = n_forecasts
         self.prediction_frequency = prediction_frequency
+        self.strategy = trainer_config['strategy'] if 'strategy' in trainer_config.keys() else None
 
         # Data Normalization settings
         self.config_normalization = configure.Normalization(
@@ -2646,7 +2647,9 @@ class NeuralProphet:
 
         # Determine the max_number of epochs
         self.config_train.set_auto_batch_epoch(n_data=len(dataset))
-        self.train_sampler = DistributedSampler(dataset)
+        num_replicas = self.strategy.num_workers if self.strategy else 1
+        log.info(f'num_replicas:{num_replicas}')
+        self.train_sampler = DistributedSampler(dataset, num_replicas=num_replicas, rank=0)
         loader = DataLoader(dataset, batch_size=self.config_train.batch_size, shuffle=True, num_workers=num_workers, sampler=self.train_sampler)
 
         return loader
